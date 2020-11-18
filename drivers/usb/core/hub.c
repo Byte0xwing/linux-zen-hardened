@@ -5100,6 +5100,7 @@ static void hub_port_connect(struct usb_hub *hub, int port1, u16 portstatus,
 			goto done;
 		return;
 	}
+
 	if (hub_is_superspeed(hub->hdev))
 		unit_load = 150;
 	else

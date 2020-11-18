@@ -43,6 +43,8 @@
 #include <asm/io_bitmap.h>
 #include <asm/proto.h>
 #include <asm/frame.h>
+#include <asm/elf.h>
+#include <linux/sizes.h>
 
 #include "process.h"
 
@@ -596,6 +598,7 @@ void speculation_ctrl_update_current(void)
 static inline void cr4_toggle_bits_irqsoff(unsigned long mask)
 {
 	unsigned long newval, cr4 = this_cpu_read(cpu_tlbstate.cr4);
+	BUG_ON(cr4 != __read_cr4());
 
 	newval = cr4 ^ mask;
 	if (newval != cr4) {
@@ -903,7 +906,10 @@ unsigned long arch_align_stack(unsigned long sp)
 
 unsigned long arch_randomize_brk(struct mm_struct *mm)
 {
-	return randomize_page(mm->brk, 0x02000000);
+	if (mmap_is_ia32())
+		return mm->brk + get_random_long() % SZ_32M + PAGE_SIZE;
+	else
+		return mm->brk + get_random_long() % SZ_1G + PAGE_SIZE;
 }
 
 /*
