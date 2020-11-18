@@ -106,48 +106,44 @@
 #ifdef CONFIG_USER_NS
 #include <linux/user_namespace.h>
 #endif
+#if IS_ENABLED(CONFIG_USB)
+#include <linux/usb.h>
+#endif
+#if defined CONFIG_TTY
+#include <linux/tty.h>
+#endif
 
 #if defined(CONFIG_SYSCTL)
 
 /* Constants used for minimum and  maximum */
 #ifdef CONFIG_LOCKUP_DETECTOR
-static int sixty = 60;
+static int sixty __read_only = 60;
 #endif
 
-static int __maybe_unused neg_one = -1;
-static int __maybe_unused two = 2;
-static int __maybe_unused four = 4;
-static unsigned long zero_ul;
-static unsigned long one_ul = 1;
-static unsigned long long_max = LONG_MAX;
-static int one_hundred = 100;
-static int two_hundred = 200;
-static int one_thousand = 1000;
-#ifdef CONFIG_SCHED_MUQSS
-static int zero = 0;
-static int one = 1;
-extern int rr_interval;
-extern int sched_interactive;
-extern int sched_iso_cpu;
-extern int sched_yield_type;
-extern int hrtimer_granularity_us;
-extern int hrtimeout_min_us;
-#endif
-#if defined(CONFIG_PRINTK) || defined(CONFIG_SCHED_MUQSS)
-static int ten_thousand = 10000;
+static int __maybe_unused neg_one __read_only = -1;
+static int __maybe_unused two __read_only = 2;
+static int __maybe_unused four __read_only = 4;
+static unsigned long zero_ul __read_only;
+static unsigned long one_ul __read_only = 1;
+static unsigned long long_max __read_only = LONG_MAX;
+static int one_hundred __read_only = 100;
+static int two_hundred __read_only = 200;
+static int one_thousand __read_only = 1000;
+#ifdef CONFIG_PRINTK
+static int ten_thousand __read_only = 10000;
 #endif
 #ifdef CONFIG_PERF_EVENTS
-static int six_hundred_forty_kb = 640 * 1024;
+static int six_hundred_forty_kb __read_only = 640 * 1024;
 #endif
 
 /* this is needed for the proc_doulongvec_minmax of vm_dirty_bytes */
-static unsigned long dirty_bytes_min = 2 * PAGE_SIZE;
+static unsigned long dirty_bytes_min __read_only = 2 * PAGE_SIZE;
 
 /* this is needed for the proc_dointvec_minmax for [fs_]overflow UID and GID */
-static int maxolduid = 65535;
-static int minolduid;
+static int maxolduid __read_only = 65535;
+static int minolduid __read_only;
 
-static int ngroups_max = NGROUPS_MAX;
+static int ngroups_max __read_only = NGROUPS_MAX;
 static const int cap_last_cap = CAP_LAST_CAP;
 
 /*
@@ -155,7 +151,7 @@ static const int cap_last_cap = CAP_LAST_CAP;
  * and hung_task_check_interval_secs
  */
 #ifdef CONFIG_DETECT_HUNG_TASK
-static unsigned long hung_task_timeout_max = (LONG_MAX/HZ);
+static unsigned long hung_task_timeout_max __read_only = (LONG_MAX/HZ);
 #endif
 
 #ifdef CONFIG_INOTIFY_USER
@@ -197,20 +193,20 @@ static enum sysctl_writes_mode sysctl_writes_strict = SYSCTL_WRITES_STRICT;
 int sysctl_legacy_va_layout;
 #endif
 
-#if defined(CONFIG_SCHED_DEBUG) && !defined(CONFIG_SCHED_MUQSS)
-static int min_sched_granularity_ns = 100000;		/* 100 usecs */
-static int max_sched_granularity_ns = NSEC_PER_SEC;	/* 1 second */
-static int min_wakeup_granularity_ns;			/* 0 usecs */
-static int max_wakeup_granularity_ns = NSEC_PER_SEC;	/* 1 second */
+#ifdef CONFIG_SCHED_DEBUG
+static int min_sched_granularity_ns __read_only = 100000;		/* 100 usecs */
+static int max_sched_granularity_ns __read_only = NSEC_PER_SEC;	/* 1 second */
+static int min_wakeup_granularity_ns __read_only;			/* 0 usecs */
+static int max_wakeup_granularity_ns __read_only = NSEC_PER_SEC;	/* 1 second */
 #ifdef CONFIG_SMP
-static int min_sched_tunable_scaling = SCHED_TUNABLESCALING_NONE;
-static int max_sched_tunable_scaling = SCHED_TUNABLESCALING_END-1;
+static int min_sched_tunable_scaling __read_only = SCHED_TUNABLESCALING_NONE;
+static int max_sched_tunable_scaling __read_only = SCHED_TUNABLESCALING_END-1;
 #endif /* CONFIG_SMP */
-#endif /* CONFIG_SCHED_DEBUG && !CONFIG_SCHED_MUQSS */
+#endif /* CONFIG_SCHED_DEBUG */
 
 #ifdef CONFIG_COMPACTION
-static int min_extfrag_threshold;
-static int max_extfrag_threshold = 1000;
+static int min_extfrag_threshold __read_only;
+static int max_extfrag_threshold __read_only = 1000;
 #endif
 
 #endif /* CONFIG_SYSCTL */
@@ -1665,7 +1661,6 @@ int proc_do_static_key(struct ctl_table *table, int write,
 }
 
 static struct ctl_table kern_table[] = {
-#ifndef CONFIG_SCHED_MUQSS
 	{
 		.procname	= "sched_child_runs_first",
 		.data		= &sysctl_sched_child_runs_first,
@@ -1857,73 +1852,6 @@ static struct ctl_table kern_table[] = {
 		.extra1		= SYSCTL_ONE,
 	},
 #endif
-#elif defined(CONFIG_SCHED_MUQSS)
-	{
-		.procname	= "rr_interval",
-		.data		= &rr_interval,
-		.maxlen		= sizeof (int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &one,
-		.extra2		= &one_thousand,
-	},
-	{
-		.procname	= "interactive",
-		.data		= &sched_interactive,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one,
-	},
-	{
-		.procname	= "iso_cpu",
-		.data		= &sched_iso_cpu,
-		.maxlen		= sizeof (int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &zero,
-		.extra2		= &one_hundred,
-	},
-	{
-		.procname	= "yield_type",
-		.data		= &sched_yield_type,
-		.maxlen		= sizeof (int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &zero,
-		.extra2		= &two,
-	},
-#if defined(CONFIG_SMP) && defined(CONFIG_SCHEDSTATS)
-	{
-		.procname	= "sched_schedstats",
-		.data		= NULL,
-		.maxlen		= sizeof(unsigned int),
-		.mode		= 0644,
-		.proc_handler	= sysctl_schedstats,
-		.extra1		= SYSCTL_ZERO,
-		.extra2		= SYSCTL_ONE,
-	},
-#endif /* CONFIG_SMP && CONFIG_SCHEDSTATS */
-	{
-		.procname	= "hrtimer_granularity_us",
-		.data		= &hrtimer_granularity_us,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &one,
-		.extra2		= &ten_thousand,
-	},
-	{
-		.procname	= "hrtimeout_min_us",
-		.data		= &hrtimeout_min_us,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.extra1		= &one,
-		.extra2		= &ten_thousand,
-	},
-#endif /* CONFIG_SCHED_MUQSS */
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 	{
 		.procname	= "sched_energy_aware",
@@ -2348,6 +2276,37 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec_minmax_sysadmin,
 		.extra1		= SYSCTL_ZERO,
 		.extra2		= &two,
+	},
+#endif
+#if defined CONFIG_TTY
+	{
+		.procname	= "tiocsti_restrict",
+		.data		= &tiocsti_restrict,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax_sysadmin,
+		.extra1		= SYSCTL_ZERO,
+		.extra2		= SYSCTL_ONE,
+	},
+#endif
+	{
+		.procname	= "device_sidechannel_restrict",
+		.data		= &device_sidechannel_restrict,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax_sysadmin,
+		.extra1		= SYSCTL_ZERO,
+		.extra2		= SYSCTL_ONE,
+	},
+#if IS_ENABLED(CONFIG_USB)
+	{
+		.procname	= "deny_new_usb",
+		.data		= &deny_new_usb,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax_sysadmin,
+		.extra1		= SYSCTL_ZERO,
+		.extra2		= SYSCTL_ONE,
 	},
 #endif
 	{
